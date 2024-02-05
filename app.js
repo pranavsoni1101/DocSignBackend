@@ -4,11 +4,17 @@ var cors = require('cors')
 
 const connectToDb = require('./db');
 const authRouter = require("./routes/auth");
+const pdfRouter = require("./routes/pdf");
+
 const app = express();
 
 app.use(cors());
 app.use(bodyParser.json());
+
+// Setting up api routes
 app.use('/auth', authRouter);
+app.use('/pdf', pdfRouter);
+
 // Connect to MongoDB
 connectToDb();
 
