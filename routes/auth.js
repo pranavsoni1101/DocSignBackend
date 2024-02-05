@@ -8,6 +8,7 @@ router.post('/signup', async (req, res) => {
     try {
       const hashedPassword = await bcrypt.hash(req.body.password, 10);
       const user = new User({
+        name: req.body.name,
         email: req.body.email,
         password: hashedPassword,
       });
@@ -36,5 +37,24 @@ router.post('/signup', async (req, res) => {
       res.status(500).send('Error logging in');
     }
   });
+
+    router.get('/user', async (req, res) => {
+        try {
+          // Extract the token from the Authorization header
+          const token = req.headers.authorization.split(' ')[1];
+          // Decode the token to get the user's ID
+          const decoded = jwt.verify(token, 'your_secret_key');
+          // Fetch the user details from the database
+          const user = await User.findById(decoded.userId);
+          // Send the user details back to the client
+          res.json({
+            name: user.name,
+            email: user.email,
+          });
+        } catch (error) {
+          console.error(error);
+          res.status(500).send('Error fetching user details');
+        }
+      });
   
   module.exports = router;
