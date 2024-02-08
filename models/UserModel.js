@@ -6,6 +6,7 @@ const pdfSchema = new mongoose.Schema({
   data: Buffer,
   size: Number,
   recipientEmail: String,
+  uploadedAt: { type: Date, default: Date.now }
 });
 
 // Define User Schema
