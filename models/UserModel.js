@@ -4,7 +4,8 @@ const mongoose = require("mongoose");
 const pdfSchema = new mongoose.Schema({
   name: String,
   data: Buffer,
-  recipientEmail: String
+  size: Number,
+  recipientEmail: String,
 });
 
 // Define User Schema

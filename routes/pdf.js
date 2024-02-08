@@ -141,10 +141,14 @@ router.post('/:userId/pdfs', upload.single('pdf'), async (req, res) => {
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
+        
+        // Calculate the size of the uploaded file
+        const fileSize = req.file.size; 
 
         user.pdfs.push({
             name: req.file.originalname,
-            data: req.file.buffer
+            data: req.file.buffer,
+            size: fileSize // Store the file size
         });
         await user.save();
 
