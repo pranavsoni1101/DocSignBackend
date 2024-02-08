@@ -1,10 +1,18 @@
 const mongoose = require("mongoose");
 
+// Define PDF Schema
+const pdfSchema = new mongoose.Schema({
+  name: String,
+  data: Buffer,
+  recipientEmail: String
+});
+
 // Define User Schema
 const userSchema = new mongoose.Schema({
     name: {type:String, required: true},
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
+    pdfs: [pdfSchema]
 });
 
 // Create a virtual field for the user's creation date
