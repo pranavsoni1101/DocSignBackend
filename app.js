@@ -5,6 +5,7 @@ var cors = require('cors')
 const connectToDb = require('./db');
 const authRouter = require("./routes/auth");
 const pdfRouter = require("./routes/pdf");
+const signatureRouter = require("./routes/signature");
 
 const app = express();
 
@@ -14,6 +15,7 @@ app.use(bodyParser.json());
 // Setting up api routes
 app.use('/auth', authRouter);
 app.use('/pdf', pdfRouter);
+app.use('/signature', signatureRouter);
 
 // Connect to MongoDB
 connectToDb();

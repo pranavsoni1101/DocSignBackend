@@ -1,21 +1,20 @@
 const mongoose = require("mongoose");
 const pdfSchema = require("./PdfModel");
-
-// Define PDF Schema
-// const pdfSchema = new mongoose.Schema({
-//   name: String,
-//   data: Buffer,
-//   size: Number,
-//   recipientEmail: String,
-//   uploadedAt: { type: Date, default: Date.now }
-// });
+const signatureSchema = require("./SignatureModel");
 
 // Define User Schema
 const userSchema = new mongoose.Schema({
     name: {type:String, required: true},
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
-    pdfs: [pdfSchema]
+    pdfs: [pdfSchema],
+    signatures: [signatureSchema]
+});
+
+// Define Schema for storing creation dates
+const userCreationSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    createdAt: { type: Date, default: Date.now }
 });
 
 // Create a virtual field for the user's creation date
@@ -33,13 +32,16 @@ userSchema.pre('save', function(next) {
     next();
 });
 
-const User = mongoose.model('User', userSchema);
-
-// Define Schema for storing creation dates
-const userCreationSchema = new mongoose.Schema({
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    createdAt: { type: Date, default: Date.now }
+// Pre-save hook to limit the number of signature uploads to 10
+userSchema.pre('save', function(next) {
+    if (this.signatures.length > 10) {
+        const err = new Error('Maximum number of signature uploads exceeded (10)');
+        return next(err);
+    }
+    next();
 });
+
+const User = mongoose.model('User', userSchema);
 
 const UserCreation = mongoose.model('UserCreation', userCreationSchema);
 
