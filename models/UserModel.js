@@ -1,13 +1,14 @@
 const mongoose = require("mongoose");
+const pdfSchema = require("./PdfModel");
 
 // Define PDF Schema
-const pdfSchema = new mongoose.Schema({
-  name: String,
-  data: Buffer,
-  size: Number,
-  recipientEmail: String,
-  uploadedAt: { type: Date, default: Date.now }
-});
+// const pdfSchema = new mongoose.Schema({
+//   name: String,
+//   data: Buffer,
+//   size: Number,
+//   recipientEmail: String,
+//   uploadedAt: { type: Date, default: Date.now }
+// });
 
 // Define User Schema
 const userSchema = new mongoose.Schema({
