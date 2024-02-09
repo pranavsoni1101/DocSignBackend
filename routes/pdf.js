@@ -84,7 +84,7 @@ router.delete('/:userId/pdfs/:pdfId', async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
-    user.pdfs.id(pdfId).remove();
+    user.pdfs.id(pdfId).deleteOne();
     await user.save();
     return res.status(200).json({ message: 'PDF deleted successfully' });
   } catch (error) {
