@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+const multer = require('multer');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { User, UserCreation } = require("../models/UserModel");
@@ -68,7 +69,14 @@ router.get('/user', async (req, res) => {
     }
 });
 
-router.patch('/user', async (req, res) => {
+// Set up Multer storage
+const storage = multer.memoryStorage();
+// Create Multer instance
+const upload = multer({ storage: storage });
+
+// const upload = multer({ storage: storage });
+
+router.patch('/user', upload.single('profilePicture'),async (req, res) => {
     try {
         // Extract the token from the Authorization header
         const token = req.headers.authorization.split(' ')[1];
@@ -92,6 +100,10 @@ router.patch('/user', async (req, res) => {
         }
         if (req.body.profilePicture) {
             user.profilePicture = req.body.profilePicture;
+        }
+        if (req.file) {
+            // If a file was uploaded, save its path to the user's profile picture field
+            user.profilePicture = req.file.buffer.toString('base64');
         }
         await user.save();
         // Send updated user details back to the client
