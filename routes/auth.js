@@ -58,11 +58,56 @@ router.get('/user', async (req, res) => {
             id: user._id,
             name: user.name,
             email: user.email,
+            phone: user.phone, // Include phone number
+            address: user.address, // Include address
+            profilePicture: user.profilePicture // Include profile picture
         });
     } catch (error) {
         console.error(error);
         res.status(500).send('Error fetching user details');
     }
 });
+
+router.patch('/user', async (req, res) => {
+    try {
+        // Extract the token from the Authorization header
+        const token = req.headers.authorization.split(' ')[1];
+        // Decode the token to get the user's ID
+        const decoded = jwt.verify(token, 'your_secret_key');
+        // Fetch the user details from the database
+        const user = await User.findById(decoded.userId);
+
+        if (!user) {
+            return res.status(404).send('User not found');
+        }
+        // Update user details based on request data
+        if (req.body.name) {
+            user.name = req.body.name;
+        }
+        if (req.body.phone) {
+            user.phone = req.body.phone;
+        }
+        if (req.body.address) {
+            user.address = req.body.address;
+        }
+        if (req.body.profilePicture) {
+            user.profilePicture = req.body.profilePicture;
+        }
+        await user.save();
+        // Send updated user details back to the client
+        res.json({
+            id: user._id,
+            name: user.name,
+            email: user.email,
+            phone: user.phone,
+            address: user.address,
+            profilePicture: user.profilePicture
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Error updating user details');
+    }
+});
+
 
 module.exports = router;

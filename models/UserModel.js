@@ -4,9 +4,12 @@ const signatureSchema = require("./SignatureModel");
 
 // Define User Schema
 const userSchema = new mongoose.Schema({
-    name: {type:String, required: true},
+    name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
+    phone: { type: String },
+    address: { type: String },
+    profilePicture: { type: String },
     pdfs: [pdfSchema],
     signatures: [signatureSchema]
 });
