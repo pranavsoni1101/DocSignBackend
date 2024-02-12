@@ -60,10 +60,12 @@ router.post('/:userId/pdfs', upload.single('pdf'), async (req, res) => {
         const fileSize = req.file.size; 
 
         user.pdfs.push({
-            name: req.file.originalname,
+            fileName: req.file.originalname,
             data: req.file.buffer,
             size: fileSize, // Store the file 
-            uploadedAt: new Date()
+            uploadedAt: new Date(),
+            recipientName: req.body.recipientName,
+            recipientEmail: req.body.recipientEmail,
         });
         await user.save();
 
