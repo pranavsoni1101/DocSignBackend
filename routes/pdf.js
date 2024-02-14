@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
+const nodemailer = require("nodemailer");
 const User = require('../models/UserModel').User;
 
 // Multer configuration
@@ -68,12 +69,36 @@ router.post('/:userId/pdfs', upload.single('pdf'), async (req, res) => {
             recipientEmail: req.body.recipientEmail,
         });
         await user.save();
+        let transporter = nodemailer.createTransport({
+          // host: "smtp.gmail.com",
+          // port: 465,
+          // secure: true,       
+          service: 'Gmail',
+          auth: {
+              user: "pranav.soni@kcloudtechnologies.com",
+              pass: "uoxu mmnh icfh jktr" // Your Gmail password
+          }
+      });
 
-        return res.status(201).json({ message: 'File uploaded successfully' });
+      // Prepare email message
+      let mailOptions = {
+          from: user.email, // Sender address
+          to: req.body.recipientEmail, // Recipient address
+          subject: 'New PDF Uploaded', // Subject line
+          text: `Dear ${req.body.recipientName},\n\nA new PDF file (${req.file.originalname}) has been uploaded.\n\nBest regards,\nYour App`
+      };
+
+      // Send email
+      await transporter.sendMail(mailOptions);
+
+      return res.status(201).json({ message: 'File uploaded successfully and email sent' });
+
+        // return res.status(201).json({ message: 'File uploaded successfully' });  
     } catch (error) {
         console.error(error);
         return res.status(500).json({ message: 'Internal Server Error' });
     }
+    
 });
 
 
