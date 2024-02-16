@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const nodemailer = require("nodemailer");
 const User = require('../models/UserModel').User;
 const { updateAcceptanceAndExpiry } = require('../middlewares/updateAcceptanceAndExpiry'); // Import the function to update acceptance and expiry
 const checkPdfExpiry = require('../middlewares/checkPdfExpiry'); // Import the middleware
+const sendMail = require('../utils/sendMail');
 
 // Multer configuration
 const storage = multer.memoryStorage();
@@ -100,29 +100,11 @@ router.post('/:userId/pdfs', upload.single('pdf'), async (req, res) => {
       });
       await user.save();
       
-      // Construct email message with expiry time
-      const emailMessage = `Dear ${req.body.recipientName},\n\nA new PDF file (${req.file.originalname}) has been uploaded.\n\nThis PDF will expire on ${expiryDate.toDateString()}.\n\nBest regards,\nYour App`;
-
-      let transporter = nodemailer.createTransport({
-        service: 'Gmail',
-        auth: {
-            user: "pranav.soni@kcloudtechnologies.com",
-            pass: "uoxu mmnh icfh jktr" // Your Gmail password
-        }
-      });
-
-      // Prepare email message
-      let mailOptions = {
-          from: user.email, // Sender address
-          to: req.body.recipientEmail, // Recipient address
-          subject: 'New PDF Uploaded', // Subject line
-          text: emailMessage // Email message including expiry time
-      };
-
-      // Send email
-      await transporter.sendMail(mailOptions);
-
-      return res.status(201).json({ message: 'File uploaded successfully and email sent' });
+      const from = user.email;
+      const to = req.body.recipientEmail;
+      const subject  = "New PDF Uploaded";
+      const text = `Dear ${req.body.recipientName},\n\nA new PDF file (${req.file.originalname}) has been uploaded.\n\nThis PDF will expire on ${expiryDate.toDateString()}.\n\nBest regards,\nYour App`;
+      sendMail(from, to, subject, text);
 
   } catch (error) {
       console.error(error);
