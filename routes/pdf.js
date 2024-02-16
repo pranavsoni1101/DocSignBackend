@@ -3,7 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const nodemailer = require("nodemailer");
 const User = require('../models/UserModel').User;
-const { updateAcceptanceAndExpiry } = require('../models/PdfModel'); // Import the function to update acceptance and expiry
+const { updateAcceptanceAndExpiry } = require('../middlewares/updateAcceptanceAndExpiry'); // Import the function to update acceptance and expiry
 const checkPdfExpiry = require('../middlewares/checkPdfExpiry'); // Import the middleware
 
 // Multer configuration
