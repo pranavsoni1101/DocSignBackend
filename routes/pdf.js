@@ -3,10 +3,36 @@ const router = express.Router();
 const multer = require('multer');
 const nodemailer = require("nodemailer");
 const User = require('../models/UserModel').User;
+const { updateAcceptanceAndExpiry } = require('../models/PdfModel'); // Import the function to update acceptance and expiry
+const checkPdfExpiry = require('../middlewares/checkPdfExpiry'); // Import the middleware
 
 // Multer configuration
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
+
+// Route to accept the PDF
+router.post('/pdfs/:id/accept', async (req, res) => {
+  const pdfId = req.params.id;
+  try {
+    await updateAcceptanceAndExpiry(pdfId, 'accept'); // Update acceptance status
+    res.status(200).send('PDF accepted successfully.');
+  } catch (error) {
+    console.error('Error accepting PDF:', error);
+    res.status(500).send('Error accepting PDF.');
+  }
+});
+
+// Route to mention a delay in signing the PDF
+router.post('/pdfs/:id/delay', async (req, res) => {
+  const pdfId = req.params.id;
+  try {
+    await updateAcceptanceAndExpiry(pdfId, 'delay'); // Update delay mention status and expiry date if necessary
+    res.status(200).send('Delay mentioned successfully.');
+  } catch (error) {
+    console.error('Error mentioning delay:', error);
+    res.status(500).send('Error mentioning delay.');
+  }
+});
 
 // GET all PDF files for a specific user
 router.get('/:userId/pdfs', async (req, res) => {
@@ -24,7 +50,7 @@ router.get('/:userId/pdfs', async (req, res) => {
 });
 
 // GET a single PDF file by ID for a specific user
-router.get('/:userId/pdfs/:pdfId', async (req, res) => {
+router.get('/:userId/pdfs/:pdfId', checkPdfExpiry, async (req, res) => { // Apply checkPdfExpiry middleware
   try {
     const userId = req.params.userId;
     const pdfId = req.params.pdfId;
@@ -46,38 +72,43 @@ router.get('/:userId/pdfs/:pdfId', async (req, res) => {
 
 // POST upload a new PDF file for a specific user
 router.post('/:userId/pdfs', upload.single('pdf'), async (req, res) => {
-    try {
-        if (!req.file) {
-            return res.status(400).json({ message: 'Please upload a file' });
-        }
+  try {
+      if (!req.file) {
+          return res.status(400).json({ message: 'Please upload a file' });
+      }
 
-        const userId = req.params.userId;
-        const user = await User.findById(userId);
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
-        }
-        
-        // Calculate the size of the uploaded file
-        const fileSize = req.file.size; 
+      const userId = req.params.userId;
+      const user = await User.findById(userId);
+      if (!user) {
+          return res.status(404).json({ message: 'User not found' });
+      }
+      
+      // Calculate the size of the uploaded file
+      const fileSize = req.file.size; 
 
-        user.pdfs.push({
-            fileName: req.file.originalname,
-            data: req.file.buffer,
-            size: fileSize, // Store the file 
-            uploadedAt: new Date(),
-            recipientName: req.body.recipientName,
-            recipientEmail: req.body.recipientEmail,
-        });
-        await user.save();
-        let transporter = nodemailer.createTransport({
-          // host: "smtp.gmail.com",
-          // port: 465,
-          // secure: true,       
-          service: 'Gmail',
-          auth: {
-              user: "pranav.soni@kcloudtechnologies.com",
-              pass: "uoxu mmnh icfh jktr" // Your Gmail password
-          }
+      // Set expiry date to 7 days from now
+      const expiryDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days from now
+
+      user.pdfs.push({
+          fileName: req.file.originalname,
+          data: req.file.buffer,
+          size: fileSize, // Store the file 
+          uploadedAt: new Date(),
+          recipientName: req.body.recipientName,
+          recipientEmail: req.body.recipientEmail,
+          expiryDate: expiryDate // Set expiry date to 7 days from now
+      });
+      await user.save();
+      
+      // Construct email message with expiry time
+      const emailMessage = `Dear ${req.body.recipientName},\n\nA new PDF file (${req.file.originalname}) has been uploaded.\n\nThis PDF will expire on ${expiryDate.toDateString()}.\n\nBest regards,\nYour App`;
+
+      let transporter = nodemailer.createTransport({
+        service: 'Gmail',
+        auth: {
+            user: "pranav.soni@kcloudtechnologies.com",
+            pass: "uoxu mmnh icfh jktr" // Your Gmail password
+        }
       });
 
       // Prepare email message
@@ -85,7 +116,7 @@ router.post('/:userId/pdfs', upload.single('pdf'), async (req, res) => {
           from: user.email, // Sender address
           to: req.body.recipientEmail, // Recipient address
           subject: 'New PDF Uploaded', // Subject line
-          text: `Dear ${req.body.recipientName},\n\nA new PDF file (${req.file.originalname}) has been uploaded.\n\nBest regards,\nYour App`
+          text: emailMessage // Email message including expiry time
       };
 
       // Send email
@@ -93,14 +124,11 @@ router.post('/:userId/pdfs', upload.single('pdf'), async (req, res) => {
 
       return res.status(201).json({ message: 'File uploaded successfully and email sent' });
 
-        // return res.status(201).json({ message: 'File uploaded successfully' });  
-    } catch (error) {
-        console.error(error);
-        return res.status(500).json({ message: 'Internal Server Error' });
-    }
-    
+  } catch (error) {
+      console.error(error);
+      return res.status(500).json({ message: 'Internal Server Error' });
+  }
 });
-
 
 // DELETE delete a PDF file by ID for a specific user
 router.delete('/:userId/pdfs/:pdfId', async (req, res) => {
@@ -111,13 +139,22 @@ router.delete('/:userId/pdfs/:pdfId', async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
-    user.pdfs.id(pdfId).deleteOne();
+    const pdf = user.pdfs.id(pdfId);
+    if (!pdf) {
+      return res.status(404).json({ message: 'PDF not found' });
+    }
+
+    // Remove the PDF from the user's PDFs array
+    pdf.deleteOne();
     await user.save();
+
     return res.status(200).json({ message: 'PDF deleted successfully' });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: 'Internal Server Error' });
   }
 });
+
+module.exports = router;
 
 module.exports = router;

@@ -8,7 +8,11 @@ const pdfSchema = new mongoose.Schema({
   recipientName: String,
   recipientEmail: String,
 
-  uploadedAt: { type: Date, default: Date.now }
+  uploadedAt: { type: Date, default: Date.now },
+  expiryDate: { type: Date }, // Expiry date to be set conditionally
+  accepted: { type: Boolean, default: false }, // Field to track acceptance
+  delayMentioned: { type: Boolean, default: false } // Field to track delay mention
+
 });
 
 module.exports = pdfSchema;
