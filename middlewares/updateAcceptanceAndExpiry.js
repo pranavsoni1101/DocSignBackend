@@ -23,7 +23,7 @@ async function updateAcceptanceAndExpiry(pdfId, action) {
             case 'reject':
               pdf.accepted = false;
               pdf.delayed = false;
-              pdf.expiryDate = null; // Remove expiry date on rejection
+              pdf.expiryDate = new Date(); // Remove expiry date on rejection
               break;
             case 'delay':
               pdf.delayed = true;
@@ -35,6 +35,9 @@ async function updateAcceptanceAndExpiry(pdfId, action) {
           }
       
           await user.save();      
+
+          // To return the user
+          return user;
     } catch (error) {
         console.error('Error updating PDF and expiry:', error);
         throw error;
