@@ -14,24 +14,27 @@ async function updateAcceptanceAndExpiry(pdfId, action) {
             throw new Error('PDF not found');
         }
 
-        // Update acceptance status and expiry date based on action
-        if (action === 'accept') {
-            pdf.accepted = true;
-            pdf.delayMentioned = false;
-            pdf.expiryDate = null;
-        } else if (action === 'delay') {
-            pdf.accepted = true;
-
-            // Extend expiry date by 7 days
-            const currentExpiry = pdf.expiryDate;
-            const newExpiry = new Date(currentExpiry.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days later
-            pdf.expiryDate = newExpiry;
-        }
-
-        // Save the changes
-        await user.save();
-
-        return { success: true, message: `PDF ${action === 'accept' ? 'accepted' : 'expiry date updated'}` };
+        switch (action) {
+            case 'accept':
+              pdf.accepted = true;
+              pdf.delayed = false;
+              pdf.expiryDate = null; // Remove expiry date on acceptance
+              break;
+            case 'reject':
+              pdf.accepted = false;
+              pdf.delayed = false;
+              pdf.expiryDate = null; // Remove expiry date on rejection
+              break;
+            case 'delay':
+              pdf.delayed = true;
+              // Extend expiry date by 7 days if delayed
+              pdf.expiryDate = new Date(pdf.expiryDate.getTime() + 7 * 24 * 60 * 60 * 1000); // Add 7 days to current expiry date
+              break;
+            default:
+              throw new Error('Invalid action');
+          }
+      
+          await user.save();      
     } catch (error) {
         console.error('Error updating PDF and expiry:', error);
         throw error;
