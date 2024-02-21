@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
+const mongoose = require("mongoose");
 const User = require('../models/UserModel').User;
 const { updateAcceptanceAndExpiry } = require('../middlewares/updateAcceptanceAndExpiry'); // Import the function to update acceptance and expiry
 const checkPdfExpiry = require('../middlewares/checkPdfExpiry'); // Import the middleware
@@ -125,22 +126,27 @@ router.post('/:userId/pdfs', upload.single('pdf'), async (req, res) => {
       // Set expiry date to 7 days from now
       const expiryDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days from now
 
-      user.pdfs.push({
-          fileName: req.file.originalname,
-          data: req.file.buffer,
-          size: fileSize, // Store the file 
-          uploadedAt: new Date(),
-          recipientName: req.body.recipientName,
-          recipientEmail: req.body.recipientEmail,
-          expiryDate: expiryDate // Set expiry date to 7 days from now
-      });
-      await user.save();
+      const pdfId = new mongoose.Types.ObjectId();
+
+      const newPdf = {
+        _id: pdfId,
+        fileName: req.file.originalname,
+        data: req.file.buffer,
+        size: fileSize, // Store the file 
+        uploadedAt: new Date(),
+        recipientName: req.body.recipientName,
+        recipientEmail: req.body.recipientEmail,
+        expiryDate: expiryDate // Set expiry date to 7 days from now
+    }
+    await user.pdfs.push(newPdf);
+    await user.save();
       
       const from = user.email;
       const to = req.body.recipientEmail;
       const subject  = "New PDF Uploaded";
       const text = `Dear ${req.body.recipientName},\n\nA new PDF file (${req.file.originalname}) has been uploaded.\n\nThis PDF will expire on ${expiryDate.toDateString()}.\n\nBest regards,\nYour App`;
       sendMail(from, to, subject, text);
+      res.status(201).json({ fileName: newPdf.fileName, id: newPdf._id });
 
   } catch (error) {
       console.error(error);
