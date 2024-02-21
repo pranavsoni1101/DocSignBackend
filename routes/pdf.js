@@ -167,6 +167,7 @@ router.post('/:userId/pdfs/:pdfId/positions', async (req, res) => {
 
     // Update the input field positions
     pdf.inputFields = positions;
+    pdf.signatureReady = true;
     await user.save();
 
     const from = user.email;
