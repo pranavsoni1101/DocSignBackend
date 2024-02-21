@@ -1,18 +1,20 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
+const jwt = require('jsonwebtoken');
 const mongoose = require("mongoose");
 const User = require('../models/UserModel').User;
 const { updateAcceptanceAndExpiry } = require('../middlewares/updateAcceptanceAndExpiry'); // Import the function to update acceptance and expiry
 const checkPdfExpiry = require('../middlewares/checkPdfExpiry'); // Import the middleware
 const sendMail = require('../utils/sendMail');
+const isAuthenticated = require('../utils/isAuthenticated');
 
 // Multer configuration
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
 // Route to accept the PDF
-router.post('/pdfs/:id/accept', async (req, res) => {
+router.post('/pdfs/:id/accept', isAuthenticated,async (req, res) => {
   const pdfId = req.params.id;
   try {
     const user = await updateAcceptanceAndExpiry(pdfId, 'accept'); // Update acceptance status
@@ -31,7 +33,7 @@ router.post('/pdfs/:id/accept', async (req, res) => {
 });
 
 // Route to mention a rejection in signing the PDF
-router.post('/pdfs/:id/reject', async (req, res) => {
+router.post('/pdfs/:id/reject', isAuthenticated,async (req, res) => {
   const pdfId = req.params.id;
   try {
     const user = await updateAcceptanceAndExpiry(pdfId, 'reject'); // Update delay mention status and expiry date if necessary
@@ -52,7 +54,7 @@ router.post('/pdfs/:id/reject', async (req, res) => {
 
 
 // Route to mention a delay in signing the PDF
-router.post('/pdfs/:id/delay', async (req, res) => {
+router.post('/pdfs/:id/delay', isAuthenticated, async (req, res) => {
   const pdfId = req.params.id;
   try {
     const user = await updateAcceptanceAndExpiry(pdfId, 'delay'); // Update delay mention status and expiry date if necessary
@@ -85,6 +87,34 @@ router.get('/:userId/pdfs', async (req, res) => {
     return res.status(500).json({ message: 'Internal Server Error' });
   }
 });
+
+// Route that specifically fetches the files that are sent to them for signature
+
+router.get('/pending/toBeSignedPdf', async (req, res) => {
+  try {
+    // Extract JWT token from request headers or query parameters
+    const token = req.headers.authorization.split(' ')[1]; // Assuming token is sent in the Authorization header
+    
+    // Decode JWT token to get user information
+    const decodedToken = jwt.verify(token, 'your_secret_key'); // Replace 'your_secret_key' with your actual secret key
+
+    const user = await User.findById(decodedToken.userId);
+    // Extract user's email from decoded token
+    const loggedInUserEmail = user.email;
+    
+    // Find all users where recipientEmail matches logged-in user's email
+    const usersWithMatchingPDFs = await User.find({ 'pdfs.recipientEmail': loggedInUserEmail });
+    
+    // Extract PDFs from matching users
+    const matchingPDFs = usersWithMatchingPDFs.flatMap(user => user.pdfs.filter(pdf => pdf.recipientEmail === loggedInUserEmail));
+
+    res.json(matchingPDFs);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: 'Internal Server Error' });
+  }
+});
+
 
 // GET a single PDF file by ID for a specific user
 router.get('/:userId/pdfs/:pdfId', checkPdfExpiry, async (req, res) => { // Apply checkPdfExpiry middleware
