@@ -140,7 +140,8 @@ router.post('/:userId/pdfs', upload.single('pdf'), async (req, res) => {
     }
     await user.pdfs.push(newPdf);
     await user.save();
-      
+    
+    res.status(201).json({ fileName: newPdf.fileName, id: newPdf._id });
   } catch (error) {
       console.error(error);
       return res.status(500).json({ message: 'Internal Server Error' });
@@ -169,11 +170,10 @@ router.post('/:userId/pdfs/:pdfId/positions', async (req, res) => {
     await user.save();
 
     const from = user.email;
-      const to = req.body.recipientEmail;
+      const to = pdf.recipientEmail;
       const subject  = "New PDF Uploaded for your Signature";
-      const text = `Dear ${req.body.recipientName},\n\nA new PDF file (${req.file.originalname}) has been uploaded.PLease sign it before the expiry.\n\nThis PDF will expire on ${expiryDate.toDateString()}.\n\nBest regards,\nYour App`;
+      const text = `Dear ${pdf.recipientName},\n\nA new PDF file (${pdf.fileName}) has been uploaded by ${user.name}.PLease sign it before the expiry.\n\nThis PDF will expire on ${pdf.expiryDate.toString()}.\n\nBest regards,\nYour App`;
       sendMail(from, to, subject, text);
-      res.status(201).json({ fileName: newPdf.fileName, id: newPdf._id });
 
 
     res.status(200).json({ message: 'Input field positions updated successfully' });
