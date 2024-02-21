@@ -141,18 +141,48 @@ router.post('/:userId/pdfs', upload.single('pdf'), async (req, res) => {
     await user.pdfs.push(newPdf);
     await user.save();
       
-      const from = user.email;
-      const to = req.body.recipientEmail;
-      const subject  = "New PDF Uploaded";
-      const text = `Dear ${req.body.recipientName},\n\nA new PDF file (${req.file.originalname}) has been uploaded.\n\nThis PDF will expire on ${expiryDate.toDateString()}.\n\nBest regards,\nYour App`;
-      sendMail(from, to, subject, text);
-      res.status(201).json({ fileName: newPdf.fileName, id: newPdf._id });
-
   } catch (error) {
       console.error(error);
       return res.status(500).json({ message: 'Internal Server Error' });
   }
 });
+
+// route to post the positions of the inputs where the user has to sign
+router.post('/:userId/pdfs/:pdfId/positions', async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const pdfId = req.params.pdfId;
+    const positions = req.body; // Array of input field positions [{ pageIndex, x, y }, { pageIndex, x, y }, ...]
+
+    // Find the user and the PDF
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    const pdf = user.pdfs.id(pdfId);
+    if (!pdf) {
+      return res.status(404).json({ message: 'PDF not found' });
+    }
+
+    // Update the input field positions
+    pdf.inputFields = positions;
+    await user.save();
+
+    const from = user.email;
+      const to = req.body.recipientEmail;
+      const subject  = "New PDF Uploaded for your Signature";
+      const text = `Dear ${req.body.recipientName},\n\nA new PDF file (${req.file.originalname}) has been uploaded.PLease sign it before the expiry.\n\nThis PDF will expire on ${expiryDate.toDateString()}.\n\nBest regards,\nYour App`;
+      sendMail(from, to, subject, text);
+      res.status(201).json({ fileName: newPdf.fileName, id: newPdf._id });
+
+
+    res.status(200).json({ message: 'Input field positions updated successfully' });
+  } catch (error) {
+    console.error('Error updating input field positions:', error);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+});
+
 
 // DELETE delete a PDF file by ID for a specific user
 router.delete('/:userId/pdfs/:pdfId', async (req, res) => {

@@ -12,7 +12,13 @@ const pdfSchema = new mongoose.Schema({
   expiryDate: { type: Date }, // Expiry date to be set conditionally
   accepted: { type: Boolean, default: false }, // Field to track acceptance
   delayMentioned: { type: Boolean, default: false }, // Field to track delay mention
-  signatureReady: {type: Boolean, default: false}
+  signatureReady: {type: Boolean, default: false},
+
+  inputFields: [{
+    pageIndex: Number, // Index of the page where the input field is located
+    x: Number, // X-coordinate of the input field
+    y: Number, // Y-coordinate of the input field
+  }]
 
 });
 
