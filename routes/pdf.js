@@ -7,7 +7,7 @@ const User = require('../models/UserModel').User;
 const { updateAcceptanceAndExpiry } = require('../middlewares/updateAcceptanceAndExpiry'); // Import the function to update acceptance and expiry
 const checkPdfExpiry = require('../middlewares/checkPdfExpiry'); // Import the middleware
 const sendMail = require('../utils/sendMail');
-const isAuthenticated = require('../utils/isAuthenticated');
+const isAuthenticated = require('../middlewares/isAuthenticated');
 
 // Multer configuration
 const storage = multer.memoryStorage();
@@ -136,6 +136,36 @@ router.get('/:userId/pdfs/:pdfId', checkPdfExpiry, async (req, res) => { // Appl
     return res.status(500).json({ message: 'Internal Server Error' });
   }
 });
+
+// Route to fetch a single pending PDF by ID
+router.get('/pending/:pdfId/:userEmail', isAuthenticated, async (req, res) => {
+  try {
+    const pdfId = req.params.pdfId;
+
+    // Find the pending PDF by ID
+    const user = await User.findOne({ 'pdfs._id': pdfId });
+    if (!user) {
+      return res.status(404).json({ message: 'PDF not found' });
+    }
+
+    const pdf = user.pdfs.id(pdfId);
+    if (!pdf) {
+      return res.status(404).json({ message: 'PDF not found' });
+    }
+
+    // Ensure that the logged-in user is the recipient of the pending PDF
+    const loggedInUserEmail = req.params.userEmail;
+    if (pdf.recipientEmail !== loggedInUserEmail) {
+      return res.status(403).json({ message: 'You are not authorized to access this PDF' });
+    }
+
+    res.json(pdf);
+  } catch (error) {
+    console.error('Error fetching pending PDF:', error);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+});
+
 
 // POST upload a new PDF file for a specific user
 router.post('/:userId/pdfs', upload.single('pdf'), async (req, res) => {
