@@ -7,6 +7,12 @@ const { User, UserCreation } = require("../models/UserModel");
 
 router.post('/signup', async (req, res) => {
     try {
+        // Check if user exists or not
+        const existingUser = await User.findOne({ email: req.body.email });
+        if (existingUser) {
+            // If the user already exists, redirect to login
+            return res.status(409).send('User already exists');
+        }
         const hashedPassword = await bcrypt.hash(req.body.password, 10);
         const user = new User({
             name: req.body.name,
