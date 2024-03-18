@@ -9,7 +9,8 @@ const userSchema = new mongoose.Schema({
     password: { type: String, required: true },
     phone: { type: String },
     address: { type: String },
-    profilePicture: { type: String },
+    profilePicture: {  type: String },
+    profilePictureName: { type: String },
     pdfs: [pdfSchema],
     signatures: [signatureSchema]
 });

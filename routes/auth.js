@@ -67,7 +67,8 @@ router.get('/user', async (req, res) => {
             email: user.email,
             phone: user.phone, // Include phone number
             address: user.address, // Include address
-            profilePicture: user.profilePicture // Include profile picture
+            profilePicture: user.profilePicture, // Include profile picture
+            profilePictureName: user.profilePictureName
         });
     } catch (error) {
         console.error(error);
@@ -104,13 +105,11 @@ router.patch('/user', upload.single('profilePicture'),async (req, res) => {
         if (req.body.address) {
             user.address = req.body.address;
         }
-        if (req.body.profilePicture) {
-            user.profilePicture = req.body.profilePicture;
+        if (req.file && req.body.profilePictureName) {
+            user.profilePicture = req.file.buffer.toString('base64'); // Store the image data
+            user.profilePictureName = req.body.profilePictureName; // Store the image name
         }
-        if (req.file) {
-            // If a file was uploaded, save its path to the user's profile picture field
-            user.profilePicture = req.file.buffer.toString('base64');
-        }
+
         await user.save();
         // Send updated user details back to the client
         res.json({
@@ -119,7 +118,8 @@ router.patch('/user', upload.single('profilePicture'),async (req, res) => {
             email: user.email,
             phone: user.phone,
             address: user.address,
-            profilePicture: user.profilePicture
+            profilePicture: user.profilePicture,
+            profilePictureName: user.profilePictureName // Include profile picture name in the response
         });
     } catch (error) {
         console.error(error);
