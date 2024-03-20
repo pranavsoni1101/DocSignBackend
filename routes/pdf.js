@@ -209,24 +209,39 @@ router.post('/:userId/pdfs', upload.single('pdf'), async (req, res) => {
 });
 
 // route to post the positions of the inputs where the user has to sign
-router.post('/:userId/pdfs/:pdfId/positions', async (req, res) => {
+router.patch('/:userId/pdfs/:pdfId/positions', async (req, res) => {
   try {
     const userId = req.params.userId;
     const pdfId = req.params.pdfId;
     const positions = req.body; // Array of input field positions [{ pageIndex, x, y }, { pageIndex, x, y }, ...]
-
+console.log("data", positions);
     // Find the user and the PDF
     const user = await User.findById(userId);
+    // console.log("User", user);
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
     const pdf = user.pdfs.id(pdfId);
+    // console.log("pdf", pdf);
     if (!pdf) {
       return res.status(404).json({ message: 'PDF not found' });
     }
 
     // Update the input field positions
-    pdf.inputFields = positions;
+    positions.map((position) => {
+      pdf.inputFields.push(
+        {
+          id: position.id,
+          // ref: Object,
+          type: position.type,
+          value: position.value,
+          page: position.page, // Index of the page where the input field is located
+          x: position.x, // X-coordinate of the input field
+          y: position.y, // Y-coordinate of the input field
+        }
+      )
+    })
+    // pdf.inputFields = positions;
     pdf.signatureReady = true;
     await user.save();
 

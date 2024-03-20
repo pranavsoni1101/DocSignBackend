@@ -1,5 +1,15 @@
 const mongoose = require('mongoose');
 
+
+const inputFieldsSchema = new mongoose.Schema({
+  id: String,
+  // ref: Object,
+  type: String,
+  value: String,
+  page: Number, // Index of the page where the input field is located
+  x: Number, // X-coordinate of the input field
+  y: Number, // Y-coordinate of the input field
+});
 // Define PDF Schema
 const pdfSchema = new mongoose.Schema({
   fileName: String,
@@ -14,12 +24,9 @@ const pdfSchema = new mongoose.Schema({
   delayMentioned: { type: Boolean, default: false }, // Field to track delay mention
   signatureReady: {type: Boolean, default: false},
 
-  inputFields: [{
-    pageIndex: Number, // Index of the page where the input field is located
-    x: Number, // X-coordinate of the input field
-    y: Number, // Y-coordinate of the input field
-  }]
+  inputFields: [inputFieldsSchema]
 
 });
+
 
 module.exports = pdfSchema;
