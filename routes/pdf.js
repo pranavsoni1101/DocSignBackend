@@ -208,6 +208,60 @@ router.post('/:userId/pdfs', upload.single('pdf'), async (req, res) => {
   }
 });
 
+
+router.patch('/:emailId/pdfs/:pdfId', upload.single('pdf'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'Please upload a file' });
+    }
+
+    const emailId = req.params.emailId;
+    const pdfId = req.params.pdfId;
+    const user = await User.findOne({ 'pdfs._id': pdfId });
+
+    // const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    const pdf = user.pdfs.id(pdfId);
+    if (!pdf) {
+      return res.status(404).json({ message: 'PDF not found' });
+    }
+
+    // Ensure that the logged-in user is the recipient of the pending PDF
+    // const loggedInUserEmail = req.params.userEmail;
+    // if (pdf.recipientEmail !== loggedInUserEmail) {
+    //   return res.status(403).json({ message: 'You are not authorized to access this PDF' });
+    // }
+
+    // Calculate the size of the uploaded file
+    const fileSize = req.file.size;
+
+    // Update PDF details
+    const updatedPdf = {
+      // fileName: req.file.originalname,
+      data: req.file.buffer,
+      size: fileSize, // Store the file size
+      signedAt: new Date(),
+      // recipientName: req.body.recipientName,
+      // recipientEmail: req.body.recipientEmail,
+      expiryDate: null,
+      delayMentioned: null,
+      signatureReady: false 
+    };
+
+    // Update PDF in user's PDF array
+    // pdf.data = updatedPdf;
+    await user.save();
+
+    res.status(200).json({ fileName: updatedPdf.fileName, id: updatedPdf._id });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: 'Internal Server Error' });
+  }
+});
+
+
 // route to post the positions of the inputs where the user has to sign
 router.patch('/:userId/pdfs/:pdfId/positions', async (req, res) => {
   try {
