@@ -8,6 +8,7 @@ const { updateAcceptanceAndExpiry } = require('../middlewares/updateAcceptanceAn
 const checkPdfExpiry = require('../middlewares/checkPdfExpiry'); // Import the middleware
 const sendMail = require('../utils/sendMail');
 const isAuthenticated = require('../middlewares/isAuthenticated');
+const { verifyJWTTokenMiddleware } = require('../middlewares/jwtAuth');
 
 // Multer configuration
 const storage = multer.memoryStorage();
@@ -74,9 +75,11 @@ router.post('/pdfs/:id/delay', isAuthenticated, async (req, res) => {
 });
 
 // GET all PDF files for a specific user
-router.get('/:userId/pdfs', async (req, res) => {
+router.get('/:userId/pdfs', verifyJWTTokenMiddleware, async (req, res) => {
   try {
-    const userId = req.params.userId;
+    const data = req.decodedToken;
+    const userId = data.id;
+
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
@@ -90,17 +93,17 @@ router.get('/:userId/pdfs', async (req, res) => {
 
 // Route that specifically fetches the files that are sent to them for signature
 
-router.get('/pending/toBeSignedPdf', async (req, res) => {
+router.get('/pending/toBeSignedPdf', verifyJWTTokenMiddleware ,async (req, res) => {
   try {
     // Extract JWT token from request headers or query parameters
-    const token = req.headers.authorization.split(' ')[1]; // Assuming token is sent in the Authorization header
+    // const token = req.headers.authorization.split(' ')[1]; // Assuming token is sent in the Authorization header
     
     // Decode JWT token to get user information
-    const decodedToken = jwt.verify(token, 'your_secret_key'); // Replace 'your_secret_key' with your actual secret key
+    const decodedToken = req.decodedToken;
 
     const user = await User.findById(decodedToken.userId);
     // Extract user's email from decoded token
-    const loggedInUserEmail = user.email;
+    const loggedInUserEmail = decodedToken.email;
     
     // Find all users where recipientEmail matches logged-in user's email
     const usersWithMatchingPDFs = await User.find({ 'pdfs.recipientEmail': loggedInUserEmail });
