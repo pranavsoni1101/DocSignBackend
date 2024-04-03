@@ -4,7 +4,7 @@ const multer = require('multer');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { User, UserCreation } = require("../models/UserModel");
-const { generateJWTToken } = require("../middlewares/jwtAuth");
+const { generateJWTToken, verifyJWTTokenMiddleware } = require("../middlewares/jwtAuth");
 
 // Generates a 256-bit (32-byte) random key
 const secretKey = crypto.randomBytes(16).toString('hex'); 
@@ -56,6 +56,9 @@ router.post('/login', async (req, res) => {
             id: user._id,
             name: user.name,
             email: user.email,
+            phone: user.phone,
+            address: user.address,
+            // profilePicture: user.profilePicture
         }
 
         const token = generateJWTToken(userData);
@@ -99,14 +102,12 @@ const upload = multer({ storage: storage });
 
 // const upload = multer({ storage: storage });
 
-router.patch('/user', upload.single('profilePicture'),async (req, res) => {
+router.patch('/user', verifyJWTTokenMiddleware ,upload.single('profilePicture'),async (req, res) => {
     try {
-        // Extract the token from the Authorization header
-        const token = req.headers.authorization.split(' ')[1];
-        // Decode the token to get the user's ID
-        const decoded = jwt.verify(token, 'your_secret_key');
+        const data = req.decodedToken;
+        const userId = data.id;
         // Fetch the user details from the database
-        const user = await User.findById(decoded.userId);
+        const user = await User.findById(userId);
 
         if (!user) {
             return res.status(404).send('User not found');

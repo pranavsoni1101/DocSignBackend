@@ -3,8 +3,9 @@ const bodyParser = require('body-parser');
 var cors = require('cors')
 
 const connectToDb = require('./db');
-const authRouter = require("./routes/auth");
 const pdfRouter = require("./routes/pdf");
+const pfpRouter = require('./routes/pfp');
+const authRouter = require("./routes/auth");
 const signatureRouter = require("./routes/signature");
 
 const app = express();
@@ -16,6 +17,7 @@ app.use(bodyParser.json());
 app.use('/auth', authRouter);
 app.use('/pdf', pdfRouter);
 app.use('/signature', signatureRouter);
+app.use('/pfp', pfpRouter)
 
 // Connect to MongoDB
 connectToDb();
