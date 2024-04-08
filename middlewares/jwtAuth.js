@@ -2,7 +2,6 @@ const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 
 const secretKey = crypto.randomBytes(16).toString('hex'); 
-console.log("secrett sushhhhhhhhhh", secretKey);
 
 const generateJWTToken = (userData) => {
     const token = jwt.sign(userData, secretKey, {algorithm: 'HS256'});

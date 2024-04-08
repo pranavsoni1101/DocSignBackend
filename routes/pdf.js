@@ -141,7 +141,7 @@ router.get('/:userId/pdfs/:pdfId', checkPdfExpiry, async (req, res) => { // Appl
 });
 
 // Route to fetch a single pending PDF by ID
-router.get('/pending/:pdfId/:userEmail', isAuthenticated, async (req, res) => {
+router.get('/pending/:pdfId/:userEmail', verifyJWTTokenMiddleware, async (req, res) => {
   try {
     const pdfId = req.params.pdfId;
 
@@ -233,9 +233,9 @@ router.patch('/:emailId/pdfs/:pdfId', upload.single('pdf'), async (req, res) => 
 
     // Ensure that the logged-in user is the recipient of the pending PDF
     // const loggedInUserEmail = req.params.userEmail;
-    // if (pdf.recipientEmail !== loggedInUserEmail) {
-    //   return res.status(403).json({ message: 'You are not authorized to access this PDF' });
-    // }
+    if (pdf.recipientEmail !== emailId) {
+      return res.status(403).json({ message: 'You are not authorized to access this PDF' });
+    }
 
     // Calculate the size of the uploaded file
     const fileSize = req.file.size;
@@ -256,6 +256,7 @@ router.patch('/:emailId/pdfs/:pdfId', upload.single('pdf'), async (req, res) => 
     // Update PDF in user's PDF array
     // pdf.data = updatedPdf;
     await user.save();
+    console.log("Saved pdf", updatedPdf);
 
     res.status(200).json({ fileName: updatedPdf.fileName, id: updatedPdf._id });
   } catch (error) {

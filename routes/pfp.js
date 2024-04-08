@@ -8,7 +8,6 @@ router.get('/', verifyJWTTokenMiddleware ,async (req, res) => {
     
     const data = req.decodedToken;
     const userId = data.id;
-    console.log("User id @pfp", userId);
     
     try {
         const user = await User.findById(userId);
@@ -19,7 +18,6 @@ router.get('/', verifyJWTTokenMiddleware ,async (req, res) => {
         }
         const base64ProfilePicture = user.profilePicture.toString('base64');
 
-        console.log("Here is the pic of the handsome", user.profilePictureName);
         res.json({            profilePicture: user.profilePicture, // Include profile picture
         profilePictureName: user.profilePictureName
 });
