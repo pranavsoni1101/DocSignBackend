@@ -15,7 +15,7 @@ const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
 // Route to accept the PDF
-router.post('/pdfs/:id/accept', isAuthenticated,async (req, res) => {
+router.post('/pdfs/:id/accept', verifyJWTTokenMiddleware,async (req, res) => {
   const pdfId = req.params.id;
   try {
     const user = await updateAcceptanceAndExpiry(pdfId, 'accept'); // Update acceptance status
@@ -34,7 +34,7 @@ router.post('/pdfs/:id/accept', isAuthenticated,async (req, res) => {
 });
 
 // Route to mention a rejection in signing the PDF
-router.post('/pdfs/:id/reject', isAuthenticated,async (req, res) => {
+router.post('/pdfs/:id/reject', verifyJWTTokenMiddleware,async (req, res) => {
   const pdfId = req.params.id;
   try {
     const user = await updateAcceptanceAndExpiry(pdfId, 'reject'); // Update delay mention status and expiry date if necessary
@@ -55,7 +55,7 @@ router.post('/pdfs/:id/reject', isAuthenticated,async (req, res) => {
 
 
 // Route to mention a delay in signing the PDF
-router.post('/pdfs/:id/delay', isAuthenticated, async (req, res) => {
+router.post('/pdfs/:id/delay', verifyJWTTokenMiddleware, async (req, res) => {
   const pdfId = req.params.id;
   try {
     const user = await updateAcceptanceAndExpiry(pdfId, 'delay'); // Update delay mention status and expiry date if necessary
