@@ -101,15 +101,14 @@ router.get('/pending/toBeSignedPdf', verifyJWTTokenMiddleware ,async (req, res) 
     // Decode JWT token to get user information
     const decodedToken = req.decodedToken;
 
-    const user = await User.findById(decodedToken.userId);
+    const user = await User.findById(decodedToken.id);
     // Extract user's email from decoded token
     const loggedInUserEmail = decodedToken.email;
     
     // Find all users where recipientEmail matches logged-in user's email
-    const usersWithMatchingPDFs = await User.find({ 'pdfs.recipientEmail': loggedInUserEmail });
-    
-    // Extract PDFs from matching users
-    const matchingPDFs = usersWithMatchingPDFs.flatMap(user => user.pdfs.filter(pdf => pdf.recipientEmail === loggedInUserEmail));
+    const matchingPDFs = user.pdfs.filter(pdf => {
+      return pdf.recipients.some(recipient => recipient.email === loggedInUserEmail);
+    });
 
     res.json(matchingPDFs);
   } catch (error) {
@@ -129,11 +128,14 @@ router.get('/:userId/pdfs/:pdfId', checkPdfExpiry, async (req, res) => { // Appl
       return res.status(404).json({ message: 'User not found' });
     }
     const pdf = user.pdfs.id(pdfId);
+    console.log("This is the pdf you have been looking for", pdf);
     if (!pdf) {
       return res.status(404).json({ message: 'PDF not found' });
     }
-    res.setHeader('Content-Type', 'application/pdf');
-    res.send(pdf.data);
+    // res.setHeader('Content-Type', 'application/pdf');
+    console.log("Pdf has been found and here is the recipient", pdf.recipients);
+
+    res.json(pdf);
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: 'Internal Server Error' });
@@ -158,7 +160,8 @@ router.get('/pending/:pdfId/:userEmail', verifyJWTTokenMiddleware, async (req, r
 
     // Ensure that the logged-in user is the recipient of the pending PDF
     const loggedInUserEmail = req.params.userEmail;
-    if (pdf.recipientEmail !== loggedInUserEmail) {
+    const isAuthorized = pdf.recipients.some(recipient => recipient.email === loggedInUserEmail);
+    if (!isAuthorized) {
       return res.status(403).json({ message: 'You are not authorized to access this PDF' });
     }
 
@@ -191,14 +194,17 @@ router.post('/:userId/pdfs', upload.single('pdf'), async (req, res) => {
 
       const pdfId = new mongoose.Types.ObjectId();
 
+      const recipients = JSON.parse(req.body.recipients); // Array of recipients
+
       const newPdf = {
         _id: pdfId,
         fileName: req.file.originalname,
         data: req.file.buffer,
         size: fileSize, // Store the file 
         uploadedAt: new Date(),
-        recipientName: req.body.recipientName,
-        recipientEmail: req.body.recipientEmail,
+        recipients: recipients,
+        // recipientName: req.body.recipientName,
+        // recipientEmail: req.body.recipientEmail,
         expiryDate: expiryDate // Set expiry date to 7 days from now
     }
     await user.pdfs.push(newPdf);
@@ -291,6 +297,7 @@ console.log("data", positions);
         {
           id: position.id,
           // ref: Object,
+          user: position.user,
           type: position.type,
           value: position.value,
           page: position.page, // Index of the page where the input field is located
@@ -304,10 +311,11 @@ console.log("data", positions);
     await user.save();
 
     const from = user.email;
-      const to = pdf.recipientEmail;
-      const subject  = "New PDF Uploaded for your Signature";
-      const text = `Dear ${pdf.recipientName},\n\nA new PDF file (${pdf.fileName}) has been uploaded by ${user.name}.PLease sign it before the expiry.\n\nThis PDF will expire on ${pdf.expiryDate.toString()}.\n\nBest regards,\nYour App`;
-      sendMail(from, to, subject, text);
+    const subject  = "New PDF Uploaded for your Signature";
+    pdf.recipients.map((recipient) => {
+      const text = `Dear ${recipient.name},\n\nA new PDF file (${pdf.fileName}) has been uploaded by ${user.name}.PLease sign it before the expiry.\n\nThis PDF will expire on ${pdf.expiryDate.toString()}.\n\nBest regards,\nYour App`;
+      sendMail(from, recipient.email, subject, text);
+    })  
 
 
     res.status(200).json({ message: 'Input field positions updated successfully' });
