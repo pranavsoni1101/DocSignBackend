@@ -128,12 +128,12 @@ router.get('/:userId/pdfs/:pdfId', checkPdfExpiry, async (req, res) => { // Appl
       return res.status(404).json({ message: 'User not found' });
     }
     const pdf = user.pdfs.id(pdfId);
-    console.log("This is the pdf you have been looking for", pdf);
+    // console.log("This is the pdf you have been looking for", pdf);
     if (!pdf) {
       return res.status(404).json({ message: 'PDF not found' });
     }
     // res.setHeader('Content-Type', 'application/pdf');
-    console.log("Pdf has been found and here is the recipient", pdf.recipients);
+    // console.log("Pdf has been found and here is the recipient", pdf.recipients);
 
     res.json(pdf);
   } catch (error) {
@@ -239,7 +239,7 @@ router.patch('/:emailId/pdfs/:pdfId', upload.single('pdf'), async (req, res) => 
 
     // Ensure that the logged-in user is the recipient of the pending PDF
     // const loggedInUserEmail = req.params.userEmail;
-    if (pdf.recipientEmail !== emailId) {
+    if (pdf.recipients.some(recipient => emailId  in recipient)) {
       return res.status(403).json({ message: 'You are not authorized to access this PDF' });
     }
 
