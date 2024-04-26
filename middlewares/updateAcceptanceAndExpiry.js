@@ -18,15 +18,19 @@ async function updateAcceptanceAndExpiry(pdfId, action) {
             case 'accept':
               pdf.accepted = true;
               pdf.delayed = false;
+              pdf.rejected = false;
               pdf.expiryDate = null; // Remove expiry date on acceptance
               break;
             case 'reject':
               pdf.accepted = false;
               pdf.delayed = false;
-              pdf.expiryDate = new Date(); // Remove expiry date on rejection
+              pdf.rejected = true;
+              pdf.expiryDate = new Date(new Date() - (1 * 24 * 60 * 60 * 1000)); // Remove expiry date on rejection
               break;
             case 'delay':
+              pdf.accepted = true;
               pdf.delayed = true;
+              pdf.rejected = false;
               // Extend expiry date by 7 days if delayed
               pdf.expiryDate = new Date(pdf.expiryDate.getTime() + 7 * 24 * 60 * 60 * 1000); // Add 7 days to current expiry date
               break;

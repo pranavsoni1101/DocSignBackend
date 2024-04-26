@@ -26,11 +26,13 @@ const pdfSchema = new mongoose.Schema({
   recipients: [recipientSchema],
   // recipientName: String,
   // recipientEmail: String,
-
+  
   uploadedAt: { type: Date, default: Date.now },
   signedAt: {type: Date, default: Date.now}, 
   expiryDate: { type: Date }, // Expiry date to be set conditionally
   accepted: { type: Boolean, default: false }, // Field to track acceptance
+  delayed: { type: Boolean, default: false }, // New field for tracking delay
+  rejected: { type: Boolean, default: false }, // New field for tracking rejection
   delayMentioned: { type: Boolean, default: false }, // Field to track delay mention
   signatureReady: {type: Boolean, default: false},
 
