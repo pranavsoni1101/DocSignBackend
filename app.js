@@ -4,6 +4,7 @@ var cors = require('cors')
 
 const connectToDb = require('./db');
 const pdfRouter = require("./routes/pdf");
+const pdfActionsRouter = require("./routes/pdfActions");
 const pfpRouter = require('./routes/pfp');
 const authRouter = require("./routes/auth");
 const signatureRouter = require("./routes/signature");
@@ -16,6 +17,7 @@ app.use(bodyParser.json());
 // Setting up api routes
 app.use('/auth', authRouter);
 app.use('/pdf', pdfRouter);
+app.use('/pdf', pdfActionsRouter);
 app.use('/signature', signatureRouter);
 app.use('/pfp', pfpRouter)
 
