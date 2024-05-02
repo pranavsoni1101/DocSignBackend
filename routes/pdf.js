@@ -29,30 +29,44 @@ router.get('/:userId/pdfs', verifyJWTTokenMiddleware, async (req, res) => {
 });
 
 // Route that specifically fetches the files that are sent to them for signature
-
-router.get('/pending/toBeSignedPdf', verifyJWTTokenMiddleware ,async (req, res) => {
+router.get('/pending/toBeSignedPdf', verifyJWTTokenMiddleware, async (req, res) => {
   try {
-    // Extract JWT token from request headers or query parameters
-    // const token = req.headers.authorization.split(' ')[1]; // Assuming token is sent in the Authorization header
-    
-    // Decode JWT token to get user information
     const decodedToken = req.decodedToken;
-
-    const user = await User.findById(decodedToken.id);
-    // Extract user's email from decoded token
     const loggedInUserEmail = decodedToken.email;
-    
-    // Find all users where recipientEmail matches logged-in user's email
-    const matchingPDFs = user.pdfs.filter(pdf => {
-      return pdf.recipients.some(recipient => recipient.email === loggedInUserEmail);
-    });
 
-    res.json(matchingPDFs);
+    const matchingPDFs = await User.aggregate([
+      {
+        $unwind: "$pdfs"
+      },
+      {
+        $match: {
+          "pdfs.recipients.email": loggedInUserEmail
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          pdfs: { $push: "$pdfs" }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          pdfs: 1
+        }
+      }
+    ]);
+
+    // Extract the array of PDFs from the aggregation result
+    const pdfsArray = matchingPDFs.length > 0 ? matchingPDFs[0].pdfs : [];
+
+    res.json(pdfsArray);
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: 'Internal Server Error' });
   }
 });
+
 
 
 // GET a single PDF file by ID for a specific user
