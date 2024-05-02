@@ -169,7 +169,7 @@ router.post('/:userId/pdfs', upload.single('pdf'), async (req, res) => {
 });
 
 
-router.patch('/:emailId/pdfs/:pdfId', upload.single('pdf'), async (req, res) => {
+router.patch('/:emailId/pdfs/:pdfId', verifyJWTTokenMiddleware, upload.single('pdf'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ message: 'Please upload a file' });
@@ -177,43 +177,29 @@ router.patch('/:emailId/pdfs/:pdfId', upload.single('pdf'), async (req, res) => 
 
     const emailId = req.params.emailId;
     const pdfId = req.params.pdfId;
-    const user = await User.findOne({ 'pdfs._id': pdfId });
+    
+    // Define the fields to be updated
+    const updateFields = {
+      data: req.file.buffer,
+      size: req.file.size,
+      signedAt: new Date(),
+      signed: true,
+      expiryDate: null,
+      delayMentioned: null,
+      signatureReady: false
+    };
 
-    // const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-    const pdf = user.pdfs.id(pdfId);
-    if (!pdf) {
+    // Update the PDF document
+    const filter = { 'pdfs._id': pdfId };
+    const options = { new: true }; // Return the updated document
+    const updatedPdf = await User.findOneAndUpdate(filter, updateFields, options);
+
+    // Check if PDF is found
+    if (!updatedPdf) {
       return res.status(404).json({ message: 'PDF not found' });
     }
 
-    // Ensure that the logged-in user is the recipient of the pending PDF
-    // const loggedInUserEmail = req.params.userEmail;
-    if (pdf.recipients.some(recipient => emailId  in recipient)) {
-      return res.status(403).json({ message: 'You are not authorized to access this PDF' });
-    }
-
-    // Calculate the size of the uploaded file
-    const fileSize = req.file.size;
-
-    // Update PDF details
-    const updatedPdf = {
-      // fileName: req.file.originalname,
-      data: req.file.buffer,
-      size: fileSize, // Store the file size
-      signedAt: new Date(),
-      // recipientName: req.body.recipientName,
-      // recipientEmail: req.body.recipientEmail,
-      expiryDate: null,
-      delayMentioned: null,
-      signatureReady: false 
-    };
-
-    // Update PDF in user's PDF array
-    // pdf.data = updatedPdf;
-    await user.save();
-    console.log("Saved pdf", updatedPdf);
+    console.log("Updated PDF", updatedPdf);
 
     res.status(200).json({ fileName: updatedPdf.fileName, id: updatedPdf._id });
   } catch (error) {

@@ -29,6 +29,7 @@ const pdfSchema = new mongoose.Schema({
   
   uploadedAt: { type: Date, default: Date.now },
   signedAt: {type: Date, default: Date.now}, 
+  signed: {type: Boolean, default: false},
   expiryDate: { type: Date }, // Expiry date to be set conditionally
   accepted: { type: Boolean, default: false }, // Field to track acceptance
   delayed: { type: Boolean, default: false }, // New field for tracking delay
