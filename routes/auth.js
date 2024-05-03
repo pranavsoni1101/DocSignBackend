@@ -102,7 +102,7 @@ const upload = multer({ storage: storage });
 
 // const upload = multer({ storage: storage });
 
-router.patch('/user', verifyJWTTokenMiddleware ,upload.single('profilePicture'),async (req, res) => {
+router.patch('/user', verifyJWTTokenMiddleware, upload.single('profilePicture'), async (req, res) => {
     try {
         const data = req.decodedToken;
         const userId = data.id;
@@ -128,16 +128,18 @@ router.patch('/user', verifyJWTTokenMiddleware ,upload.single('profilePicture'),
         }
 
         await user.save();
-        // Send updated user details back to the client
-        res.json({
+        const userData = { 
             id: user._id,
             name: user.name,
             email: user.email,
             phone: user.phone,
             address: user.address,
-            profilePicture: user.profilePicture,
-            profilePictureName: user.profilePictureName // Include profile picture name in the response
-        });
+            // profilePicture: user.profilePicture
+        }
+
+        const token = generateJWTToken(userData);
+        res.cookie("jwt", token, { httpOnly: true }); // Ensure httpOnly flag is set
+        res.status(200).json({ token });
     } catch (error) {
         console.error(error);
         res.status(500).send('Error updating user details');
