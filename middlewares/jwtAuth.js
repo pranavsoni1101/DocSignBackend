@@ -5,6 +5,7 @@ const secretKey = crypto.randomBytes(16).toString('hex');
 
 const generateJWTToken = (userData) => {
     const token = jwt.sign(userData, secretKey, {algorithm: 'HS256'});
+    console.log("Token", token);
     return token;
 }
 
