@@ -50,7 +50,7 @@ app.get("/", (req, res) => {
   res.json("HEHEHEHE");
 })
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 8443;
 https_server.listen(PORT, () => console.log(`https_server is running on port ${PORT}`));
 
 
