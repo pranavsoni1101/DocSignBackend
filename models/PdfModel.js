@@ -37,7 +37,9 @@ const pdfSchema = new mongoose.Schema({
   delayMentioned: { type: Boolean, default: false }, // Field to track delay mention
   signatureReady: {type: Boolean, default: false},
 
-  inputFields: [inputFieldsSchema]
+  inputFields: [inputFieldsSchema],
+  encryptionKey: String, // Store the encryption key
+  iv: String //
 
 });
 

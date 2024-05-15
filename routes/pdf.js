@@ -1,4 +1,5 @@
 const express = require('express');
+const crypto = require("crypto");
 const router = express.Router();
 const multer = require('multer');
 const mongoose = require("mongoose");
@@ -70,7 +71,7 @@ router.get('/pending/toBeSignedPdf', verifyJWTTokenMiddleware, async (req, res) 
 
 
 // GET a single PDF file by ID for a specific user
-router.get('/:userId/pdfs/:pdfId', checkPdfExpiry, async (req, res) => { // Apply checkPdfExpiry middleware
+router.get('/:userId/pdfs/:pdfId', checkPdfExpiry, async (req, res) => {
   try {
     const userId = req.params.userId;
     const pdfId = req.params.pdfId;
@@ -79,14 +80,26 @@ router.get('/:userId/pdfs/:pdfId', checkPdfExpiry, async (req, res) => { // Appl
       return res.status(404).json({ message: 'User not found' });
     }
     const pdf = user.pdfs.id(pdfId);
-    // console.log("This is the pdf you have been looking for", pdf);
     if (!pdf) {
       return res.status(404).json({ message: 'PDF not found' });
     }
-    // res.setHeader('Content-Type', 'application/pdf');
-    // console.log("Pdf has been found and here is the recipient", pdf.recipients);
 
-    res.json(pdf);
+    // Retrieve the encryption key and IV associated with the PDF
+    const encryptionKey = pdf.encryptionKey;
+    const iv = pdf.iv;
+
+    // Decrypt the PDF data using the encryption key and IV
+    const decipher = crypto.createDecipheriv('aes-256-cbc', Buffer.from(encryptionKey, 'hex'), Buffer.from(iv, 'hex'));
+    let decryptedData = Buffer.concat([decipher.update(pdf.data), decipher.final()]);
+
+    // Create an object containing both the PDF object and the decrypted data
+    const responseObj = {
+      pdf: pdf.toObject(), // Convert Mongoose document to plain JavaScript object
+      decryptedData: decryptedData.toString('base64') // Convert the decrypted buffer to base64 string
+    };
+
+    // Send the response containing the PDF object and decrypted data
+    res.status(200).json(responseObj);
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: 'Internal Server Error' });
@@ -97,6 +110,7 @@ router.get('/:userId/pdfs/:pdfId', checkPdfExpiry, async (req, res) => { // Appl
 router.get('/pending/:pdfId/:userEmail', verifyJWTTokenMiddleware, async (req, res) => {
   try {
     const pdfId = req.params.pdfId;
+    const loggedInUserEmail = req.params.userEmail;
 
     // Find the pending PDF by ID
     const user = await User.findOne({ 'pdfs._id': pdfId });
@@ -110,13 +124,24 @@ router.get('/pending/:pdfId/:userEmail', verifyJWTTokenMiddleware, async (req, r
     }
 
     // Ensure that the logged-in user is the recipient of the pending PDF
-    const loggedInUserEmail = req.params.userEmail;
-    const isAuthorized = pdf.recipients.some(recipient => recipient.email === loggedInUserEmail);
-    if (!isAuthorized) {
+    const recipient = pdf.recipients.find(recipient => recipient.email === loggedInUserEmail);
+    if (!recipient) {
       return res.status(403).json({ message: 'You are not authorized to access this PDF' });
     }
 
-    res.json(pdf);
+    // Retrieve the encryption key and IV associated with the PDF
+    const encryptionKey = pdf.encryptionKey;
+    const iv = pdf.iv;
+
+    // Decrypt the PDF data using the encryption key and IV
+    const decipher = crypto.createDecipheriv('aes-256-cbc', Buffer.from(encryptionKey, 'hex'), Buffer.from(iv, 'hex'));
+    let decryptedData = Buffer.concat([decipher.update(pdf.data), decipher.final()]);
+
+    // Update the PDF object with the decrypted data
+    pdf.data = decryptedData;
+
+    // Send the PDF object as response
+    res.status(200).json(pdf);
   } catch (error) {
     console.error('Error fetching pending PDF:', error);
     res.status(500).json({ message: 'Internal Server Error' });
@@ -124,50 +149,61 @@ router.get('/pending/:pdfId/:userEmail', verifyJWTTokenMiddleware, async (req, r
 });
 
 
+
 // POST upload a new PDF file for a specific user
 router.post('/:userId/pdfs', upload.single('pdf'), async (req, res) => {
   try {
-      if (!req.file) {
-          return res.status(400).json({ message: 'Please upload a file' });
-      }
-
-      const userId = req.params.userId;
-      const user = await User.findById(userId);
-      if (!user) {
-          return res.status(404).json({ message: 'User not found' });
-      }
-      
-      // Calculate the size of the uploaded file
-      const fileSize = req.file.size; 
-
-      // Set expiry date to 7 days from now
-      const expiryDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days from now
-
-      const pdfId = new mongoose.Types.ObjectId();
-
-      const recipients = JSON.parse(req.body.recipients); // Array of recipients
-
-      const newPdf = {
-        _id: pdfId,
-        fileName: req.file.originalname,
-        data: req.file.buffer,
-        size: fileSize, // Store the file 
-        uploadedAt: new Date(),
-        recipients: recipients,
-        // recipientName: req.body.recipientName,
-        // recipientEmail: req.body.recipientEmail,
-        expiryDate: expiryDate // Set expiry date to 7 days from now
+    if (!req.file) {
+      return res.status(400).json({ message: 'Please upload a file' });
     }
+
+    const userId = req.params.userId;
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Calculate the size of the uploaded file
+    const fileSize = req.file.size;
+
+    // Set expiry date to 7 days from now
+    const expiryDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days from now
+
+    const pdfId = new mongoose.Types.ObjectId();
+
+    const recipients = JSON.parse(req.body.recipients); // Array of recipients
+
+    // Generate a random encryption key
+    const encryptionKey = crypto.randomBytes(32); // 32 bytes = 256 bits, suitable for AES-256
+
+    // Generate a random IV
+    const iv = crypto.randomBytes(16); // 16 bytes = 128 bits, suitable for AES
+
+    // Encrypt the PDF buffer using the encryption key and IV
+    const cipher = crypto.createCipheriv('aes-256-cbc', encryptionKey, iv);
+    let encryptedData = Buffer.concat([cipher.update(req.file.buffer), cipher.final()]);
+
+    const newPdf = {
+      _id: pdfId,
+      fileName: req.file.originalname,
+      data: encryptedData, // Store the encrypted data
+      size: fileSize, // Store the file size
+      uploadedAt: new Date(),
+      recipients: recipients,
+      expiryDate: expiryDate, // Set expiry date to 7 days from now
+      encryptionKey: encryptionKey.toString('hex'), // Store the encryption key as a hexadecimal string
+      iv: iv.toString('hex') // Store the IV as a hexadecimal string
+    };
+
     await user.pdfs.push(newPdf);
     await user.save();
-    
+
     res.status(201).json({ fileName: newPdf.fileName, id: newPdf._id });
   } catch (error) {
-      console.error(error);
-      return res.status(500).json({ message: 'Internal Server Error' });
+    console.error(error);
+    return res.status(500).json({ message: 'Internal Server Error' });
   }
 });
-
 
 router.patch('/:emailId/pdfs/:pdfId', verifyJWTTokenMiddleware, upload.single('pdf'), async (req, res) => {
   try {
@@ -177,24 +213,54 @@ router.patch('/:emailId/pdfs/:pdfId', verifyJWTTokenMiddleware, upload.single('p
 
     const emailId = req.params.emailId;
     const pdfId = req.params.pdfId;
-    
-    // Define the fields to be updated
+
+    // Find the user
+    const user = await User.findOne({ 'pdfs._id': pdfId });
+    if (!user) {
+      return res.status(404).json({ message: 'PDF not found' });
+    }
+
+    // Find the PDF within the user's documents
+    const pdf = user.pdfs.id(pdfId);
+    if (!pdf) {
+      return res.status(404).json({ message: 'PDF not found' });
+    }
+
+    // Check if the logged-in user is authorized to update the PDF
+    if (emailId !== pdf.recipients[0].email) { // Assuming only one recipient for simplicity
+      return res.status(403).json({ message: 'You are not authorized to update this PDF' });
+    }
+
+    // Calculate the size of the uploaded file
+    const fileSize = req.file.size;
+
+    // Generate a random encryption key for the updated PDF
+    const encryptionKey = crypto.randomBytes(32).toString('hex'); // Store as a hexadecimal string
+
+    // Generate a random IV for the updated PDF
+    const iv = crypto.randomBytes(16).toString('hex'); // Store as a hexadecimal string
+
+    // Encrypt the updated PDF buffer using the new encryption key and IV
+    const cipher = crypto.createCipheriv('aes-256-cbc', Buffer.from(encryptionKey, 'hex'), Buffer.from(iv, 'hex'));
+    const encryptedData = Buffer.concat([cipher.update(req.file.buffer), cipher.final()]);
+
+    // Define the fields to be updated in the PDF document
     const updateFields = {
-      data: req.file.buffer,
-      size: req.file.size,
+      data: encryptedData,
+      size: fileSize,
       signedAt: new Date(),
       signed: true,
       expiryDate: null,
       delayMentioned: null,
-      signatureReady: false
+      signatureReady: false,
+      encryptionKey: encryptionKey,
+      iv: iv
     };
 
     // Update the PDF document
-    const filter = { 'pdfs._id': pdfId };
     const options = { new: true }; // Return the updated document
-    const updatedPdf = await User.findOneAndUpdate(filter, updateFields, options);
+    const updatedPdf = await User.findOneAndUpdate({ 'pdfs._id': pdfId }, { $set: { 'pdfs.$': updateFields } }, options);
 
-    // Check if PDF is found
     if (!updatedPdf) {
       return res.status(404).json({ message: 'PDF not found' });
     }
