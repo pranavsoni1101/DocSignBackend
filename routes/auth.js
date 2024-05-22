@@ -5,6 +5,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { User, UserCreation } = require("../models/UserModel");
 const { generateJWTToken, verifyJWTTokenMiddleware } = require("../middlewares/jwtAuth");
+const sendMail = require("../utils/sendMail");
 
 // Generates a 256-bit (32-byte) random key
 const secretKey = crypto.randomBytes(16).toString('hex'); 
@@ -146,5 +147,57 @@ router.patch('/user', verifyJWTTokenMiddleware, upload.single('profilePicture'),
     }
 });
 
+// Setting otp cookie to reset password
+router.get("/requestOtp", async (req, res) => {
+    try{
+        const email = req.query.email;
+        console.log("user mail",email);
+        const user  = await User.findOne({email : email});
+    
+        if(!user){
+            res.status(404).send("User does not exist");
+        }
+    
+        const otp = Math.floor(100000 + Math.random() * 900000);
+        const otpToken = generateJWTToken(otp);
+        const subject = "OTP Verfication"
+        const text = `Here is the OTP ${otp} to reset the password, and is valid only for 3 minutes`;
+        sendMail(process.env.EMAIL_USER, email, subject, text);
+        console.log("OTP to reset pass", otpToken);
+        res.cookie("otp", otpToken);
+        res.status(200).json({ otpToken });
+    }
+    catch(error) {
+        console.error(error);
+        res.status(500).send('Error generating OTP');
+    }
+});
+
+router.patch('/changePassword', async (req, res) => {
+    try {
+        const { email,  password } = req.body;
+
+        // Find the user by email
+        const user = await User.findOne({ email: email });
+        if (!user) {
+            return res.status(404).send('User not found');
+        }
+
+        // Hash the new password
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        // Update user's password
+        user.password = hashedPassword;
+        await user.save();
+
+        // Clear the OTP cookie after successful password change
+        res.clearCookie('otp');
+
+        res.status(200).send('Password changed successfully');
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Error changing password');
+    }
+});
 
 module.exports = router;

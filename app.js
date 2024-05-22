@@ -1,6 +1,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-var cors = require('cors')
+var cors = require('cors');
+const cookieParser = require('cookie-parser');
 
 const connectToDb = require('./db');
 const pdfRouter = require("./routes/pdf");
@@ -13,6 +14,7 @@ const app = express();
 
 app.use(cors());
 app.use(bodyParser.json());
+app.use(cookieParser());
 
 // Setting up api routes
 app.use('/auth', authRouter);
