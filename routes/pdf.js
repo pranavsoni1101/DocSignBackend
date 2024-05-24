@@ -274,6 +274,89 @@ router.patch('/:emailId/pdfs/:pdfId', verifyJWTTokenMiddleware, upload.single('p
   }
 });
 
+// This is the route to set the pdfs in signed pdf in the user's schema who is logged in
+// router.patch('/:emailId/pdfs/:pdfId', verifyJWTTokenMiddleware, upload.single('pdf'), async (req, res) => {
+//   try {
+//     if (!req.file) {
+//       return res.status(400).json({ message: 'Please upload a file' });
+//     }
+
+//     const emailId = req.params.emailId;
+//     const pdfId = req.params.pdfId;
+
+//     // Find the user containing the PDF to be updated
+//     const user = await User.findOne({ 'pdfs._id': pdfId });
+//     if (!user) {
+//       return res.status(404).json({ message: 'PDF not found' });
+//     }
+
+//     // Find the PDF within the user's documents
+//     const pdf = user.pdfs.id(pdfId);
+//     if (!pdf) {
+//       return res.status(404).json({ message: 'PDF not found' });
+//     }
+
+//     // Check if the logged-in user is authorized to update the PDF
+//     if (!pdf.recipients.some(recipient => recipient.email === emailId)) {
+//       return res.status(403).json({ message: 'You are not authorized to update this PDF' });
+//     }
+
+//     // Calculate the size of the uploaded file
+//     const fileSize = req.file.size;
+
+//     // Generate a random encryption key for the updated PDF
+//     const encryptionKey = crypto.randomBytes(32).toString('hex');
+
+//     // Generate a random IV for the updated PDF
+//     const iv = crypto.randomBytes(16).toString('hex');
+
+//     // Encrypt the updated PDF buffer using the new encryption key and IV
+//     const cipher = crypto.createCipheriv('aes-256-cbc', Buffer.from(encryptionKey, 'hex'), Buffer.from(iv, 'hex'));
+//     const encryptedData = Buffer.concat([cipher.update(req.file.buffer), cipher.final()]);
+
+//     // Define the fields to be updated in the PDF document
+//     const updateFields = {
+//       'pdfs.$.data': encryptedData,
+//       'pdfs.$.size': fileSize,
+//       'pdfs.$.signedAt': new Date(),
+//       'pdfs.$.signed': true,
+//       'pdfs.$.expiryDate': null,
+//       'pdfs.$.delayMentioned': null,
+//       'pdfs.$.signatureReady': false,
+//       'pdfs.$.encryptionKey': encryptionKey,
+//       'pdfs.$.iv': iv
+//     };
+
+//     // Update the PDF document
+//     const options = { new: true }; // Return the updated document
+//     const updatedUser = await User.findOneAndUpdate(
+//       { 'pdfs._id': pdfId },
+//       { $set: updateFields },
+//       options
+//     );
+
+//     if (!updatedUser) {
+//       return res.status(404).json({ message: 'PDF not found' });
+//     }
+
+//     // Extract the updated PDF
+//     const updatedPdf = updatedUser.pdfs.id(pdfId);
+//     const loggedInUser = await User.findOne({ 'email': emailId });
+//     // Push the updated PDF to the signedpdfs array
+//     loggedInUser.signedPdfs.push(updatedPdf);
+
+//     // Save the user document
+//     await loggedInUser.save();
+
+//     console.log("Updated PDF", updatedPdf);
+
+//     res.status(200).json({ fileName: updatedPdf.fileName, id: updatedPdf._id });
+//   } catch (error) {
+//     console.error(error);
+//     return res.status(500).json({ message: 'Internal Server Error' });
+//   }
+// });
+
 
 // route to post the positions of the inputs where the user has to sign
 router.patch('/:userId/pdfs/:pdfId/positions', async (req, res) => {

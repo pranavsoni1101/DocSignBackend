@@ -12,7 +12,8 @@ const userSchema = new mongoose.Schema({
     profilePicture: {  type: String },
     profilePictureName: { type: String },
     pdfs: [pdfSchema],
-    signatures: [signatureSchema]
+    signatures: [signatureSchema],
+    signedPdfs: [pdfSchema]
 });
 
 // Define Schema for storing creation dates
